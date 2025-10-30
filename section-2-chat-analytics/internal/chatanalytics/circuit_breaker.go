@@ -65,6 +65,10 @@ func (cb *CircuitBreaker) Call(fn func() error) error {
 		cb.state.Store(StateClosed)
 	}
 
+	if state == StateClosed {
+		cb.failures.Store(0)
+	}
+
 	return nil
 }
 
