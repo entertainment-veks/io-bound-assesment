@@ -22,6 +22,12 @@ func (s *Service) IngestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if msg.BotID == "" || msg.Content == "" {
+		http.Error(w, "BotID and Content are required", http.StatusBadRequest)
+		s.metrics.RecordError()
+		return
+	}
+
 	if msg.Timestamp.IsZero() {
 		msg.Timestamp = time.Now()
 	}
@@ -31,6 +37,7 @@ func (s *Service) IngestHandler(w http.ResponseWriter, r *http.Request) {
 		s.metrics.queueDepth.Add(1)
 		s.metrics.RecordRequest(time.Since(start))
 		w.WriteHeader(http.StatusAccepted)
+		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "accepted"})
 	default:
 		http.Error(w, "Queue full", http.StatusTooManyRequests)
@@ -39,7 +46,7 @@ func (s *Service) IngestHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) MetricsHandler(w http.ResponseWriter, r *http.Request) {
-	metrics := map[string]interface{}{
+	metrics := map[string]any{
 		"requests_total":        s.metrics.requestsTotal.Load(),
 		"errors_total":          s.metrics.errorsTotal.Load(),
 		"nlp_calls_total":       s.metrics.nlpCallsTotal.Load(),
